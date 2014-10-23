@@ -16,12 +16,15 @@ public class Rogue{
 	public def cw = 4, ch = 4;
 	public def roomWidth = [10, 25];  // min max.  MUST be less than (cwp*2 - cwp/3)
 	public def roomHeight = [10, 25];
+	boolean debugSteps = false;
 	// other options
 	/*def w = 300, h = 300;
 	def cw = 5, ch = 5;
 	def roomWidth = [30, 80];  // min max.  MUST be less than (cwp*2 - cwp/3)
 	def roomHeight = [30, 80]; // min max
 	*/
+
+
 
 	// we going to use this often
 	def cwp = Math.floor(w/cw); // cell width in pixels
@@ -86,7 +89,17 @@ public class Rogue{
 
 		// get all neighbours that have dimensions defined
 		def cells = Grid.dir.collect(getCellSafe).findAll {return it}
-		if (cells.isEmpty()) return
+		if (cells.isEmpty()) {
+			println ("Adjusting room at ${room.cellx},${room.celly} [${room.x},${room.y} - ${room.width}x${room.height}] SKIP - no neigbours yet")
+			return
+		}else if (debugSteps){
+			println ("Adjusting room at ${room.cellx},${room.celly} [${room.x},${room.y} ${room.width}x${room.height}]")
+			String str = "    "
+			cells.each{
+				str += " ${it.cellx},${it.celly} - [${it.x},${it.y} ${it.width}x${it.height}]."
+			}
+			println str
+		}
 
 		// detect overlap depth for all 4 sides, keep adjusting room dimensions 1 side at a time until there are no overlaps anywhere
 		int counter = 0
@@ -105,7 +118,7 @@ public class Rogue{
 					bestOverlaps = ov1;
 					bestResult = room1
 				} else if (ov1[0] > overlaps[0]){
-					println "Made it worse??? Algorithm fail..."
+					println "Algorithm fail... making overlap worse!"
 					room1 = roomCopy(room, [:]) // for debug
 					Grid.adjustRectangle(room1, idx, 1)   // for debug
 					ov1 = Grid.getSidesOverlaps(room1, cells) // for debug
@@ -114,20 +127,25 @@ public class Rogue{
 
 			double ratio = (bestResult.width / bestResult.height)
 			if ( ratio > 3 || ratio < 0.3)
-				println "Squishing too much"
+				if (debugSteps) println "    Squishing too much: [${bestResult.x},${bestResult.y} ${bestResult.width}x${bestResult.height}]"
 
 			counter ++
 
-			if (counter > 5000)
-				println "Failed: Stuck in a loop"
+			if (counter > 5000){
+				println "    Current value is [${bestResult.x},${bestResult.y} ${bestResult.width}x${bestResult.height}]"
+				throw new Exception("Algorithm fail... Stuck in a loop adjusting room boundaries. ")
+			}
 
 			roomCopy(bestResult, room)
 			overlaps = bestOverlaps
 		}
+
+		if (debugSteps)
+			println ("    Result ${room.cellx},${room.celly} [${room.x},${room.y} - ${room.width}x${room.height}]")
 	}
 
 
-	public static void drawCorridor (from, to, map, boolean debug){
+	public void drawCorridor (from, to, map, boolean debug){
 		Grid.bresenham(from, to) {x, y->
 			if (debug)
 				map[x][y] = TILE_PATH
@@ -136,18 +154,18 @@ public class Rogue{
 				def surroundCells = Grid.getSurroundingCells(x, y, w-1, h-1)
 				map[x][y] = TILE_TERRAIN
 				surroundCells.each {p->
-					map[x + p.x][y + p.y] = TILE_TERRAIN
+					map[p.x][p.y] = TILE_TERRAIN
 				}
 			}
 		}
 	}
 
 	private void init(){
-		if (roomWidth[1] > (cwp*2-cwp/3))
-			throw new Exception("Max room width is too big. Should not be more that 1.7 of cell's width")
+		if (roomWidth[1] > cwp*1.5)
+			throw new Exception("Max room width is too big. Should not be more that 1.5 of cell's width")
 
-		if (roomHeight[1] > (chp*2-chp/3))
-			throw new Exception("Max room height is too big. Should not be more that 1.7 of cell's height")
+		if (roomHeight[1] > chp*1.5)
+			throw new Exception("Max room height is too big. Should not be more that 1.5 of cell's height")
 
 		// initialize map
 		(0..w-1).each{ i->
@@ -167,25 +185,27 @@ public class Rogue{
 	}
 
 
-	public def generate() {
+	public List generate() {
 		init()
 
 		//pick random starting cell/room
 		def currentRoom = rooms[randomInt(0, cw - 1)][randomInt(0, ch - 1)];
 		start = currentRoom
 
-		// form an acyclic graph: find unconnected neighbour cell, connect with it, jump to it and repeat
+		// Form an acyclic graph: find unconnected neighbour cell, connect with it, jump to it and repeat
 		while (currentRoom != null) {
-			def dirToCheck = (0..6).toList();
+			// TODO replace with Grid.getSurroundingCells
+			def dirToCheck = (0..6).toList(); // TODO error? should be 0..7 ?
 			Collections.shuffle(dirToCheck);
 			def found = false
 			while (!dirToCheck.isEmpty()) {
 				def idx = dirToCheck.pop();
-				def p = dir[idx]
+				def p = Grid.dir[idx]
 				def otherX = currentRoom.cellx + p.x
 				def otherY = currentRoom.celly + p.y
 				if (otherX < 0 || otherX >= cw) continue;
 				if (otherY < 0 || otherY >= ch) continue;
+
 				def otherRoom = rooms[otherX][otherY]
 				if (otherRoom.connections.size() == 0) {
 					// connect to this room
@@ -256,9 +276,8 @@ public class Rogue{
 			if (room.y + room.height - 1 >= h - 1) room.height = (h - 3 - room.y)
 
 			// adjust room boundaries in respect to neighbors and map borders
-			println "Adjusting room [${room.cellx},${room.celly}] x,y=${room.x},${room.y} w,h=${room.width},${room.height}"
 			fitRoom(room, rooms)
-			println "    Done"
+
 			int tox = room.x + room.width - 1
 			int toy = room.y + room.height - 1
 
@@ -271,7 +290,6 @@ public class Rogue{
 						map[ii][jj] = TILE_TERRAIN;
 				}
 			}
-			println "    Finished"
 		}
 
 		// copy rooms into debug map
@@ -280,7 +298,7 @@ public class Rogue{
 			(0..h - 1).each { j -> debugMap[i][j] = map[i][j] }
 		}
 
-		// Draw Corridors between connected rooms (center to center)
+		// Draw/dig Corridors between connected rooms (center to center)
 		connections.each { edge ->
 			def room = edge.from
 			def otherRoom = edge.to
@@ -288,6 +306,9 @@ public class Rogue{
 			drawCorridor(Grid.getRectCenter(room), Grid.getRectCenter(otherRoom), debugMap, true)
 			drawCorridor(Grid.getRectCenter(room), Grid.getRectCenter(otherRoom), map,false)
 		}
+
+		// add walls to corridors
+		// doing it by replacing any EMPTY pixel contacting with TERRAIN with WALL
 
 		// debug cell's boundaries
 		roomsList.each { room ->
@@ -303,6 +324,8 @@ public class Rogue{
 			Grid.bresenham([x: tox, y: fromy], [x: tox, y: toy]) { x, y -> debugMap[x][y] = TILE_CELL }
 			Grid.bresenham([x: tox, y: toy], [x: fromx, y: toy]) { x, y -> debugMap[x][y] = TILE_CELL }
 		}
+
+		return map
 	}
 
 	public void writeDown(){
@@ -328,6 +351,12 @@ public class Rogue{
 				writer << sb.toString()+"\n"
 			}
 		}
+	}
+
+	public static void main(String[] args){
+		Rogue instance = new Rogue(debugSteps: true)
+		instance.generate()
+		instance.writeDown()
 	}
 
 }

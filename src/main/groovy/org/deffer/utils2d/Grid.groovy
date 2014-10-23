@@ -30,7 +30,7 @@ public class Grid {
 		return n>=a && n<=b
 	}
 
-	// returns list of x,y objects that are 'around' given x,y.
+	// returns list of [x,y] objects that are 'around' given x,y.
 	public static List getSurroundingCells(int x, int y, int maxx, int maxy){
 		def result = []
 
