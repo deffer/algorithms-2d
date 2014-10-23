@@ -11,8 +11,6 @@ def cw = 5, ch = 5;
 def cwp = Math.floor(w/cw); // number of units/pixels in each cell width
 def chp = Math.floor(h/ch); // number of units/pixels in each cell height
 
-def cgx = 0, cgy = 0;
-
 def connectedCells = [];
 def map = [];
 def roomSizes = [];
@@ -59,8 +57,8 @@ def grid = [];
 //pick random starting grid
 //var currentGrid = ROT.RNG.getRandomInt(1, (cw * ch)) - 1;
 //console.log("First grid: " + currentGrid);
-cgx = randomInt(0, cw-1)
-cgy = randomInt(0, ch-1)
+def cgx = randomInt(0, cw-1)
+def cgy = randomInt(0, ch-1)
 
 //grid[cgx][cgy] = false; // mark as connected;
 
@@ -68,7 +66,7 @@ cgy = randomInt(0, ch-1)
 
 def idx, ncgx, ncgy
 
-// find  unconnected neighbour cells
+// find unconnected neighbour cell, connect with it, jump to it and repeat
 while (true){
 
 	def dirToCheck = [0,2,4,6];
@@ -86,8 +84,8 @@ while (true){
 
 		room = rooms[cgx][cgy];
 		if(room["connections"].size() > 0){
-			if(room["connections"][0][0] == ncgx &&
-					room["connections"][0][1] == ncgy){
+			// if we came from this room, start again
+			if(room["connections"][0][0] == ncgx && room["connections"][0][1] == ncgy){
 				break;
 			}
 		}
@@ -109,7 +107,7 @@ while (true){
 		if (dirToCheck.size() <= 0 || found) break;
 	}
 
-	if (dirToCheck.size() <= 0) break;
+	if (dirToCheck.size() <= 0) break;  // we are in the cell that has nowhere to go (everything around s connected)
 }
 
 
@@ -167,17 +165,16 @@ Collections.shuffle(connectedCells)
 	}
 }
 
-//Make 0 or more random connections to taste; I find rnd(grid_width) random connections looks good.
+//Make 0 or more random connections to taste;
+// I find rnd(grid_width) random connections looks good.
 // later
 
 
 // Create Rooms
-
 int roomw;
 int roomh;
-def roomWidth = [20,50];//this._options["roomWidth"];
-def roomHeight = [20, 50];//this._options["roomHeight"];
-
+def roomWidth = [40,55];//this._options["roomWidth"];
+def roomHeight = [40, 55];//this._options["roomHeight"];
 
 (0..cw-1).each {i->
 	(0..ch-1).each{j->
@@ -192,7 +189,7 @@ def roomHeight = [20, 50];//this._options["roomHeight"];
 
 		if(j > 0){
 			otherRoom = rooms[i][j-1];
-			while(sy - (otherRoom["y"] + otherRoom["height"] ) < 3){
+			while(sy - (otherRoom["y"] + otherRoom["height"] ) < 3){ // make a 3px gap from neighbouring room
 				sy++;
 			}
 		}
