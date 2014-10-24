@@ -40,11 +40,16 @@ public class Rogue{
 	def connections = [] // list of edges between cells. although it has 'from' and 'to', its treated as undirected
 	def start, end;      // usually this will be the longest path through the map
 
+	// only for positive numbers
 	public static int randomInt (int min, int max){
 		return (int) (Math.random()*(max-min))+min;
 	}
 
-	// in the range array[idxFrom]..arrays[idxTo] find all non-zero values and return their indices
+	public static int randomNegate(){
+		return Math.random()<0.5? -1 : 1
+	}
+
+	// in the range array[idxFrom]..array[idxTo] find all non-zero values and return their indices
 	// the lowest value's index will be the first. order of the rest is not important
 	public static List getIndicesOfNonZeroValues (int idxFrom, int idxTo, List array){
 		def result = []
@@ -69,7 +74,9 @@ public class Rogue{
 
 	// given desired room dimensions, tries to squish it between bordering rooms.
 	// grid contains all rooms, but not all of them have dimensions defined yet
-	public fitRoom = {room, grid ->
+	// this is the hardest part, and its not required for original rogue
+	//   (in the original algorithm rooms dont leave host cell boundaries)
+	private void fitRoom(room, grid){
 
 		int maxCellx = grid.size() - 1
 		int maxCelly = grid[0].size()-1
@@ -94,9 +101,9 @@ public class Rogue{
 			return
 		}else if (debugSteps){
 			println ("Adjusting room at ${room.cellx},${room.celly} [${room.x},${room.y} ${room.width}x${room.height}]")
-			String str = "    "
+			String str = "    Neighbors:"
 			cells.each{
-				str += " ${it.cellx},${it.celly} - [${it.x},${it.y} ${it.width}x${it.height}]."
+				str += " ${it.cellx},${it.celly}-[${it.x},${it.y} ${it.width}x${it.height}]."
 			}
 			println str
 		}
@@ -141,11 +148,12 @@ public class Rogue{
 		}
 
 		if (debugSteps)
-			println ("    Result ${room.cellx},${room.celly} [${room.x},${room.y} - ${room.width}x${room.height}]")
+			println ("    Result for ${room.cellx},${room.celly}: [${room.x},${room.y} - ${room.width}x${room.height}]")
 	}
 
-
-	public void drawCorridor (from, to, map, boolean debug){
+	// for debug=true, draws a 1-pixel-width line of TILE_PATH
+	// for debug=false, draws a 3-pixel-width line of TILE_TERRAIN
+	private void drawCorridor (from, to, map, boolean debug){
 		Grid.bresenham(from, to) {x, y->
 			if (debug)
 				map[x][y] = TILE_PATH
@@ -158,6 +166,24 @@ public class Rogue{
 				}
 			}
 		}
+	}
+
+	// place room in the random place with random dimensions (but somewhere in the proximity of host cell)
+	private void randomizeRoom(room){
+		// desired room boundaries
+		def roomw = randomInt(roomWidth[0], roomWidth[1]);
+		def roomh = randomInt(roomHeight[0], roomHeight[1]);
+
+		// desired coordinates
+		int fromx = (cwp * room.cellx) + randomNegate()*randomInt(0, deviationx);
+		int fromy = (chp * room.celly) + randomNegate()*randomInt(0, deviationy);
+		room.x = fromx; room.y = fromy; room.width = roomw; room.height = roomh
+
+		// adjust to map boundaries
+		if (room.x <= 0) room.x = 1;
+		if (room.y <= 0) room.y = 1;
+		if (room.x + room.width - 1 >= w - 1) room.width = (w - 3 - room.x)
+		if (room.y + room.height - 1 >= h - 1) room.height = (h - 3 - room.y)
 	}
 
 	private void init(){
@@ -253,34 +279,22 @@ public class Rogue{
 		//Make 0 or more random connections to taste; I find rnd(grid_width) random connections looks good.
 		// TODO
 
-		// Create Rooms
-
-		// for every cell, get a center (or left corner) and randomly deviate from it, lets say PX,PY
+		// Create Rooms:
+		// for every cell, get a center (or left corner) and randomly deviate from it, lets say to PX,PY
 		//   pick random room size, and place its center (or left corner) in the PX, PY.
 		//   adjust room size to fit between other rooms and borders of the map
 		Collections.shuffle(roomsList)
 		roomsList.each { room ->
-			// desired room boundaries
-			def roomw = randomInt(roomWidth[0], roomWidth[1]);
-			def roomh = randomInt(roomHeight[0], roomHeight[1]);
 
-			// desired coordinates
-			int fromx = (cwp * room.cellx) + randomInt(-deviationx, deviationx);
-			int fromy = (chp * room.celly) + randomInt(-deviationy, deviationy);
-			room.x = fromx; room.y = fromy; room.width = roomw; room.height = roomh
+			// pick coordinates and dimension (a bit random)
+			randomizeRoom(room)
 
-			// adjust to map boundaries
-			if (room.x <= 0) room.x = 1;
-			if (room.y <= 0) room.y = 1;
-			if (room.x + room.width - 1 >= w - 1) room.width = (w - 3 - room.x)
-			if (room.y + room.height - 1 >= h - 1) room.height = (h - 3 - room.y)
-
-			// adjust room boundaries in respect to neighbors and map borders
+			// adjust room boundaries in respect to neighbors
 			fitRoom(room, rooms)
 
+			// draw the room
 			int tox = room.x + room.width - 1
 			int toy = room.y + room.height - 1
-
 			for (int ii = room.x; ii <= tox; ii++) {
 				for (int jj = room.y; jj <= toy; jj++) {
 					// if (ii == room.x || ii == tox-1 || jj == room.y || jj == toy-1) // to get bordering walls instead of shared walls
@@ -298,24 +312,32 @@ public class Rogue{
 			(0..h - 1).each { j -> debugMap[i][j] = map[i][j] }
 		}
 
-		// Draw/dig Corridors between connected rooms (center to center)
+		// dig and draw corridors between connected rooms (from center to center)
 		connections.each { edge ->
 			def room = edge.from
 			def otherRoom = edge.to
 
 			drawCorridor(Grid.getRectCenter(room), Grid.getRectCenter(otherRoom), debugMap, true)
-			drawCorridor(Grid.getRectCenter(room), Grid.getRectCenter(otherRoom), map,false)
+			drawCorridor(Grid.getRectCenter(room), Grid.getRectCenter(otherRoom), map, false)
 		}
 
 		// add walls to corridors
 		// doing it by replacing any EMPTY pixel contacting with TERRAIN with WALL
 
+
 		// debug cell's boundaries
+		dumpDebugCells()
+
+		return map
+	}
+
+	// for debug: draws cell grid on the debug map.
+	private void dumpDebugCells(){
 		roomsList.each { room ->
 			int fromx = (cwp * room.cellx)
 			int fromy = (chp * room.celly)
-			int tox = fromx + cwp - 1
-			int toy = fromy + chp - 1
+			int tox = fromx + cwp // dont -1. we want to share the border with other cell for aesthetic purpose
+			int toy = fromy + chp // dont -1. we want to share the border with other cell for aesthetic purpose
 			if (tox >= w) tox = w - 1
 			if (toy >= h) toy = h - 1
 
@@ -324,12 +346,14 @@ public class Rogue{
 			Grid.bresenham([x: tox, y: fromy], [x: tox, y: toy]) { x, y -> debugMap[x][y] = TILE_CELL }
 			Grid.bresenham([x: tox, y: toy], [x: fromx, y: toy]) { x, y -> debugMap[x][y] = TILE_CELL }
 		}
-
-		return map
 	}
 
-	public void writeDown(){
-		new File("g:\\dev\\dung_debug.txt").withWriter {writer ->
+	public void writeDown(String folder){
+		if (!folder.endsWith("\\") && !folder.endsWith("/"))
+			folder += "\\";   // TODO pick OS-dependent separator
+
+		String fileName = "dung_"+w+"x"+h
+		new File(folder+fileName+"_debug.txt").withWriter {writer ->
 			def chars = ['.', '*','@', '#', 'o']
 			(0..w-1).each {i->
 				StringBuilder sb = new StringBuilder(500)
@@ -341,7 +365,7 @@ public class Rogue{
 		}
 
 
-		new File("g:\\dev\\dung.txt").withWriter {writer ->
+		new File(folder+fileName+".txt").withWriter {writer ->
 			def chars = ['.', '*','@']
 			(0..w-1).each {i->
 				StringBuilder sb = new StringBuilder(500)
@@ -356,7 +380,7 @@ public class Rogue{
 	public static void main(String[] args){
 		Rogue instance = new Rogue(debugSteps: true)
 		instance.generate()
-		instance.writeDown()
+		instance.writeDown("d:\\data\\")
 	}
 
 }

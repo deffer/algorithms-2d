@@ -87,7 +87,7 @@ public class Grid {
 	// return array of overlaps on each side of the rectangle (LEFT, RIGHT, etc.)
 	// for instance: overlap of 15 pixels on the left side means that rectangle should be shortened by
 	//   15 pixels from its right side to fit between neighbours
-	// index 0 in the array is a sum of all overlaps (to know when to stop adjusting)
+	// index 0 in the array is a sum of all overlaps (for caller to know when to stop adjusting)
 	// return example: [16, 0, 15, 1, 0] - 15 pixels on the right and 1 pixel on the bottom
 	public static List getSidesOverlaps(rect, neighbours){
 		int x = rect.x, y = rect.y, tox = rect.x+rect.width-1, toy = rect.y + rect.height-1
@@ -249,7 +249,7 @@ public class Grid {
 
 	// 'draws' a line between two points:
 	//  calculates pixels that line occupies, and calls callback function on them
-	public static void bresenham (from, to, drawCallback){
+	public static void notBresenham (from, to, drawCallback){
 		int xOffset = to.x - from.x;
 		int yOffset = to.y - from.y;
 
@@ -265,16 +265,66 @@ public class Grid {
 				// move horizontally
 				x += xCount
 				xOffset -= xCount
-			}else{
+			}else if (yOffset!=0){
 				// move vertically
 				y += yCount
 				yOffset -= yCount
 			}
-			if (x>300 || y>300 || x<0 || y<0)
-				println("Oops $x, $y for [${from.x},${from.y}] - [${to.x},${to.y}]")
+
 			drawCallback(x,y)
 		}
 	}
 
+	// classic bresenham
+	// 'draws' a line between two points:
+	//  calculates pixels that line occupies, and calls callback function on them
+	public static void bresenham(from, to, drawCallback){
+		int x1 = from.x, y1 = from.y, x2 = to.x, y2=to.y
+		def points = []
+		boolean issteep = Math.abs(y2-y1) > Math.abs(x2-x1)
+		if (issteep){
+			(x1, y1) = [y1, x1]  // swap
+			(x2, y2) = [y2, x2]
+		}
 
+		boolean rev = false
+		if (x1 > x2){
+			(x1, x2) = [x2, x1]
+			(y1, y2) = [y2, y1]
+			rev = true
+		}
+
+		int deltax = x2 - x1
+		int deltay = Math.abs(y2-y1)
+		def error = (int)(deltax / 2)
+		int y = y1
+		int ystep = y1<y2? 1 : -1
+
+		(x1..x2).each{x->
+			if (issteep)
+				points << [x: y, y: x]
+			else
+				points << [x: x, y: y]
+			error -= deltay
+			if (error<0){
+				y += ystep
+				error += deltax
+			}
+		}
+
+		//Reverse the list if the coordinates were reversed
+		if (rev){
+			points.reverse()
+		}
+		points.each {p-> drawCallback(p.x, p.y) }
+	}
+
+	public static void main(String[] args){
+		// test bresenham
+		def from = [x:80, y:7]
+		def to = [x:48, y: 13]
+		bresenham(from,to) {x,y ->
+			println (" Moving to $x $y")
+		}
+	}
 }
