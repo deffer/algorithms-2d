@@ -1,0 +1,6 @@
+== Rogue.groovy
+
+:imagesdir: ./img
+
+Modified rogue algorithm for generating 2D dungeon map. Difference with original rogue in that the rooms are having more random positions and dimensions, as well as shared walls. Example of map generated is below.
+image:: rogue80smallsquare.png
