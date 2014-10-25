@@ -186,6 +186,31 @@ public class Rogue{
 		if (room.y + room.height - 1 >= h - 1) room.height = (h - 3 - room.y)
 	}
 
+	private void fixWalls(){
+
+		List result = []
+
+		(0..w - 1).each { i ->
+			(0..h - 1).each { j ->
+
+				int tile = map[i][j]
+				if (tile == TILE_EMPTY){
+					boolean hasContactWithTerrain = false
+					def cells = Grid.getSurroundingCells(i, j, w-1, h-1)
+					cells.each{p->
+						if (map[p.x][p.y] == TILE_TERRAIN) hasContactWithTerrain = true
+					}
+					if (hasContactWithTerrain)
+						result.add([x:i, y:j])
+				}
+			}
+		}
+
+		result.each {p->
+			map[p.x][p.y] = TILE_WALL
+		}
+	}
+
 	private void init(){
 		if (roomWidth[1] > cwp*1.5)
 			throw new Exception("Max room width is too big. Should not be more that 1.5 of cell's width")
@@ -196,6 +221,7 @@ public class Rogue{
 		// initialize map
 		(0..w-1).each{ i->
 			map[i] = []
+			debugMap[i] = []
 			(0..h-1).each{j -> map[i][j] = TILE_EMPTY}
 		}
 
@@ -220,19 +246,12 @@ public class Rogue{
 
 		// Form an acyclic graph: find unconnected neighbour cell, connect with it, jump to it and repeat
 		while (currentRoom != null) {
-			// TODO replace with Grid.getSurroundingCells
-			def dirToCheck = (0..6).toList(); // TODO error? should be 0..7 ?
+			def dirToCheck = Grid.getSurroundingCells(currentRoom.cellx, currentRoom.celly, cw-1, ch-1)
 			Collections.shuffle(dirToCheck);
 			def found = false
 			while (!dirToCheck.isEmpty()) {
-				def idx = dirToCheck.pop();
-				def p = Grid.dir[idx]
-				def otherX = currentRoom.cellx + p.x
-				def otherY = currentRoom.celly + p.y
-				if (otherX < 0 || otherX >= cw) continue;
-				if (otherY < 0 || otherY >= ch) continue;
-
-				def otherRoom = rooms[otherX][otherY]
+				def p = dirToCheck.pop();
+				def otherRoom = rooms[p.x][p.y]
 				if (otherRoom.connections.size() == 0) {
 					// connect to this room
 					currentRoom.connections << [x: otherRoom.cellx, y: otherRoom.celly]
@@ -254,15 +273,11 @@ public class Rogue{
 
 			currentRoom = unconnected.pop()
 			def found = false;
-			def dirToCheck = (0..6).toList();  // TODO error? should be 0..7
+			def dirToCheck = Grid.getSurroundingCells(currentRoom.cellx, currentRoom.celly, cw-1, ch-1)
 			Collections.shuffle(dirToCheck);
 			while (!dirToCheck.isEmpty()) {
-				def idx = dirToCheck.pop();
-				def p = Grid.dir[idx]
-				def otherX = currentRoom.cellx + p.x, otherY = currentRoom.celly + p.y
-				if (otherX < 0 || otherX >= cw) continue;
-				if (otherY < 0 || otherY >= ch) continue;
-				def otherRoom = rooms[otherX][otherY]
+				def p = dirToCheck.pop();
+				def otherRoom = rooms[p.x][p.y]
 				if (otherRoom.connections.size() > 0) {
 					// connect to it
 					currentRoom.connections << [x: otherRoom.cellx, y: otherRoom.celly]
@@ -285,7 +300,6 @@ public class Rogue{
 		//   adjust room size to fit between other rooms and borders of the map
 		Collections.shuffle(roomsList)
 		roomsList.each { room ->
-
 			// pick coordinates and dimension (a bit random)
 			randomizeRoom(room)
 
@@ -306,12 +320,6 @@ public class Rogue{
 			}
 		}
 
-		// copy rooms into debug map
-		(0..w - 1).each { i ->
-			debugMap[i] = []
-			(0..h - 1).each { j -> debugMap[i][j] = map[i][j] }
-		}
-
 		// dig and draw corridors between connected rooms (from center to center)
 		connections.each { edge ->
 			def room = edge.from
@@ -322,17 +330,26 @@ public class Rogue{
 		}
 
 		// add walls to corridors
-		// doing it by replacing any EMPTY pixel contacting with TERRAIN with WALL
+		// doing it by replacing any EMPTY pixel contacting TERRAIN with a WALL
+		fixWalls()
 
-
-		// debug cell's boundaries
-		dumpDebugCells()
+		// dump room and cell's boundaries onto debug map
+		dumpDebug()
 
 		return map
 	}
 
-	// for debug: draws cell grid on the debug map.
-	private void dumpDebugCells(){
+	// draw rooms, path line and cell grid on the debug map.
+	private void dumpDebug(){
+		// copy rooms and walls into debug map
+		(0..w - 1).each { i ->
+			(0..h - 1).each { j ->
+				if (debugMap[i][j] != TILE_PATH)
+					debugMap[i][j] = map[i][j]
+			}
+		}
+
+
 		roomsList.each { room ->
 			int fromx = (cwp * room.cellx)
 			int fromy = (chp * room.celly)
@@ -380,7 +397,7 @@ public class Rogue{
 	public static void main(String[] args){
 		Rogue instance = new Rogue(debugSteps: true)
 		instance.generate()
-		instance.writeDown("d:\\data\\")
+		instance.writeDown("g:\\dev\\")
 	}
 
 }
