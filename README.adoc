@@ -1,7 +1,25 @@
+= Algorithms 2D
+
+Some algorithms for working with 2D maps. Includes map generation, quick fill, intersect, blob detection and path finding (coming soon).
+
+IMPORTANT: This code is *not* to be used in production. It can be used as a reference to create own stable algorithms.
+
 == Rogue.groovy
 
 :imagesdir: ./img/
 
-Modified rogue algorithm for generating 2D dungeon map. Difference with original rogue in that the rooms are having more random positions and dimensions, as well as shared walls. Example of map generated is below.
+Modified https://web.archive.org/web/20131025132021/http://kuoi.org/~kamikaze/GameDesign/art07_rogue_dungeon.php[rogue] algorithm for generating 2D dungeon map. Difference with original rogue is in that the rooms are having more random positions and dimensions, as well as shared walls. Example of map generated is below.
 
 image::rogue80smallsquare.png[rogue80,300,300]
+
+Attributes of the map that can be configured:
+
+* Width and height of the map (w,h)
+* Number of rooms in row and column (cw, ch)
+* Min and max dimensions of the room (roomWidth, roomHeight)
+* Disturbane (1-4, coming soon)
+
+== RogueOriginal.groovy
+
+Java port of original rogue algorithm. Ported from javascript implementation found https://gist.github.com/hyakugei/5159534[here]
+
