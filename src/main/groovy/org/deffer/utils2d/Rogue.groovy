@@ -225,7 +225,7 @@ public class Rogue{
 			(0..h-1).each{j -> map[i][j] = TILE_EMPTY}
 		}
 
-		// initialize grid
+		// initialize grid (1 room per cell)
 		(0..cw-1).each {i->
 			rooms[i] = []
 			(0..ch-1).each {j->
@@ -349,55 +349,48 @@ public class Rogue{
 			}
 		}
 
-
-		roomsList.each { room ->
-			int fromx = (cwp * room.cellx)
-			int fromy = (chp * room.celly)
-			int tox = fromx + cwp // dont -1. we want to share the border with other cell for aesthetic purpose
-			int toy = fromy + chp // dont -1. we want to share the border with other cell for aesthetic purpose
-			if (tox >= w) tox = w - 1
-			if (toy >= h) toy = h - 1
-
-			Grid.bresenham([x: fromx, y: fromy], [x: tox, y: fromy]) { x, y -> debugMap[x][y] = TILE_CELL }
-			Grid.bresenham([x: fromx, y: fromy], [x: fromx, y: toy]) { x, y -> debugMap[x][y] = TILE_CELL }
-			Grid.bresenham([x: tox, y: fromy], [x: tox, y: toy]) { x, y -> debugMap[x][y] = TILE_CELL }
-			Grid.bresenham([x: tox, y: toy], [x: fromx, y: toy]) { x, y -> debugMap[x][y] = TILE_CELL }
+		// cell boundaries
+		def c = {x,y -> debugMap[x][y] = TILE_CELL}
+		(1..cw-1).each {i-> // vertical lines
+			Grid.bresenham([x: i*cwp, y: 0], [x: i*cwp, y: chp*ch-1], c)
+		}
+		(1..ch-1).each {i-> // horizontal lines
+			Grid.bresenham([x: 0, y: chp*i], [x: cwp*cw-1, y: chp*i], c)
 		}
 	}
 
-	public void writeDown(String folder){
+
+	public static final String[] CHAR_TILES_MAP = ['.', '*','@', '#', 'o']
+
+	public void saveAsText(String fileName, map){
+		new File(fileName).withWriter {writer ->
+			(0..w-1).each {i->
+				StringBuilder sb = new StringBuilder(500)
+				(0..h-1).each {j->
+					sb.append(CHAR_TILES_MAP[ map[i][j] ])
+				}
+				writer << sb.toString()+"\n"
+			}
+		}
+	}
+	public void saveAsFiles(String folder){
 		if (!folder.endsWith("\\") && !folder.endsWith("/"))
 			folder += "\\";   // TODO pick OS-dependent separator
 
 		String fileName = "dung_"+w+"x"+h
-		new File(folder+fileName+"_debug.txt").withWriter {writer ->
-			def chars = ['.', '*','@', '#', 'o']
-			(0..w-1).each {i->
-				StringBuilder sb = new StringBuilder(500)
-				(0..h-1).each {j->
-					sb.append(chars[ debugMap[i][j] ])
-				}
-				writer << sb.toString()+"\n"
-			}
-		}
+		saveAsText(folder+fileName+"_debug.txt", debugMap)
+		saveAsText(folder+fileName+".txt", map)
 
-
-		new File(folder+fileName+".txt").withWriter {writer ->
-			def chars = ['.', '*','@']
-			(0..w-1).each {i->
-				StringBuilder sb = new StringBuilder(500)
-				(0..h-1).each {j->
-					sb.append(chars[ map[i][j] ])
-				}
-				writer << sb.toString()+"\n"
-			}
-		}
+		ImageUtil.writeMap(folder+fileName, map, w, h)
+		ImageUtil.writeMap(folder+fileName+"_debug", debugMap, w, h)
+		ImageUtil.writeMapZoomX(folder+fileName+"_zoom", map, w, h, 3)
+		ImageUtil.writeMapZoomX(folder+fileName+"_debug"+"_zoom", debugMap, w, h, 3)
 	}
 
 	public static void main(String[] args){
 		Rogue instance = new Rogue(debugSteps: true)
 		instance.generate()
-		instance.writeDown("g:\\dev\\")
+		instance.saveAsFiles("g:\\dev\\")
 	}
 
 }
