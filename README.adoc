@@ -34,9 +34,8 @@ will save both maps into png format (1 pixel per tile) into `foldername`, as wel
 
 [[map1]]
 image::dung_300x300.png[caption="Map 1: ", title="300x300 5x5", alt="300x300 5x5", width="300", height="300",float="left",align="center"]
-
 [[map1-debug]]
-image::dung_300x300_debug.png[caption="Map 1 (debug): ", title="300x300 5x5 (debug)", alt="300x300 5x5 (debug)", width="300", height="300",float="left",align="center"]
+image::dung_300x300_debug.png[caption="Map 1 (debug): ", title="300x300 5x5 (debug)", alt="300x300 5x5 (debug)", width="300", height="300",float="right",align="center"]
 
 
 
