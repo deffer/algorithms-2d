@@ -6,7 +6,7 @@ import java.awt.image.BufferedImage
 
 class ImageUtil {
 	// TILE_TERRAIN, TILE_EMPTY, TILE_WALL,TILE_PATH,TILE_CELL
-	static int[] COLORS_MAP = [0xFFDDDDDD, 0xFF999999, 0xFF444444, 0xFF44DD44, 0xFFAA1111]
+	static int[] COLORS_MAP = [0xFFDDDDDD, 0xFF999999, 0xFF444444, 0xFF44DD44, 0xFFBB1111]
 
 	// filename without extension
 	public static void writeMap(String filename, map, int sizex, int sizey){

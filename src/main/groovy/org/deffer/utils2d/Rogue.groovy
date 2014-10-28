@@ -14,23 +14,15 @@ public class Rogue{
 	// ----------------------------------------------------
 	public def w = 80, h = 80;
 	public def cw = 4, ch = 4;
-	public def roomWidth = [10, 25];  // min max.  MUST be less than (cwp*2 - cwp/3)
-	public def roomHeight = [10, 25];
+	public def roomWidth //= [10, 25];  // min max.  MUST be less than (cwp*2 - cwp/3)
+	public def roomHeight //= [10, 25];
 	boolean debugSteps = false;
-	// other options
-	/*def w = 300, h = 300;
-	def cw = 5, ch = 5;
-	def roomWidth = [30, 80];  // min max.  MUST be less than (cwp*2 - cwp/3)
-	def roomHeight = [30, 80]; // min max
-	*/
-
-
 
 	// we going to use this often
-	def cwp = Math.floor(w/cw); // cell width in pixels
-	def chp = Math.floor(h/ch); // cell height in pixels
-	int deviationx = Math.round((Math.floor(cwp/6)))  // should probably also depend on map size
-	int deviationy = Math.round((Math.floor(chp/6)))  // should probably also depend on map size
+	def cwp //= Math.floor(w/cw); // cell width in pixels
+	def chp //= Math.floor(h/ch); // cell height in pixels
+	int deviationx //= Math.round((Math.floor(cwp/6)))  // should probably also depend on map size
+	int deviationy //= Math.round((Math.floor(chp/6)))  // should probably also depend on map size
 
 	// internal structures
 	def map = []         // map of tiles/pixels of given width/height (w,h)
@@ -212,11 +204,23 @@ public class Rogue{
 	}
 
 	private void init(){
+		// recalculate
+		cwp = Math.floor(w/cw);
+		chp = Math.floor(h/ch);
+		deviationx = Math.round((Math.floor(cwp/6)))
+		deviationy = Math.round((Math.floor(chp/6)))
+
+		if (roomWidth == null || roomWidth.isEmpty())
+			roomWidth = [Math.round(cwp*0.6), Math.round(cwp*1.3)] // default
+
+		if (roomHeight == null || roomHeight.isEmpty())
+			roomHeight = [Math.round(chp*0.6), Math.round(chp*1.3)] // default
+
 		if (roomWidth[1] > cwp*1.5)
-			throw new Exception("Max room width is too big. Should not be more that 1.5 of cell's width")
+			throw new Exception("Max room width is too big. Should be less than 1.5 cell's width (${Math.round(cwp*1.5)})")
 
 		if (roomHeight[1] > chp*1.5)
-			throw new Exception("Max room height is too big. Should not be more that 1.5 of cell's height")
+			throw new Exception("Max room height is too big. Should less than 1.5 cell's height (${Math.round(chp*1.5)})")
 
 		// initialize map
 		(0..w-1).each{ i->
@@ -388,9 +392,11 @@ public class Rogue{
 	}
 
 	public static void main(String[] args){
-		Rogue instance = new Rogue(debugSteps: true)
+		//Rogue instance = new Rogue(debugSteps: true, w: 80, h:80, cw: 4, ch: 4, roomWidth: [10,25], roomHeight: [10,25])
+		//Rogue instance = new Rogue(debugSteps: true, w: 300, h:300, cw: 5, ch: 5, roomWidth: [40,70], roomHeight: [40,70])
+		Rogue instance = new Rogue(debugSteps: true, w: 60, h:60, cw: 4, ch: 4, roomWidth: [5,20], roomHeight: [5,20])
 		instance.generate()
-		instance.saveAsFiles("g:\\dev\\")
+		instance.saveAsFiles("d:\\data\\2d\\")
 	}
 
 }

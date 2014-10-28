@@ -15,9 +15,31 @@ image::rogue80smallsquare.png[rogue80,300,300]
 Attributes of the map that can be configured:
 
 * Width and height of the map (w,h)
-* Number of rooms in row and column (cw, ch)
+* Number of rooms in row and column (cw, ch), see below for explanation
 * Min and max dimensions of the room (roomWidth, roomHeight)
-* Disturbane (1-4, coming soon)
+* Disturbance (1-4, coming soon)
+
+=== Usage
+
+ Rogue rogue = new Rogue(w: 80, h:80, cw: 4, ch: 4, roomWidth: [10,25], roomHeight: [10,25])
+ def map = rogue.generate()
+ def someTile = map[20][20]
+
+This will generate a room 80x80 tiles(pixels) with 16 rooms (4 rows with 4 rooms each) connected with corridors. All rooms are connected (there is always a path between any 2 rooms). `cw` and `ch` are parameters from original rogue algorithm. The map is divided into grid with `cw` columns and `ch` rows. Each cell in the grid will have room at 'random' position in the cell.
+There is always an additional map (`debugMap`) generated, which contains cell boundaries and path used to traverse all rooms (to ensure that all rooms are connected).
+
+ rogue.saveAsFiles(folderName)
+
+will save both maps into png format (1 pixel per tile) into `foldername`, as well as text format. Below are some example of maps (and debugMaps) generated using this algorithm.
+
+[[map1]]
+image::dung_300x300.png[caption="Map 1: ", title="300x300 5x5", alt="300x300 5x5", width="300", height="300"]
+
+[[map1-debug]]
+image::dung_300x300_debug.png[caption="Map 1 (debug): ", title="300x300 5x5 (debug)", alt="300x300 5x5 (debug)", width="300", height="300"]
+
+
+
 
 == RogueOriginal.groovy
 
